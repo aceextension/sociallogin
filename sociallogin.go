@@ -1,16 +1,21 @@
 package sociallogin
 
 import (
-	"github.com/markbates/goth"
-	"github.com/markbates/goth/providers/google"
-	"github.com/markbates/goth/providers/github"
+	"log"
+
+	"net/http"
+
 	"github.com/gorilla/sessions"
+	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
+	"github.com/markbates/goth/providers/github"
+	"github.com/markbates/goth/providers/google"
 )
 
 // Config holds the configuration for social login providers
 type Config struct {
 	SessionSecret string
+	IsProduction  bool
 	Google        *ProviderConfig
 	GitHub        *ProviderConfig
 }
@@ -23,10 +28,16 @@ type ProviderConfig struct {
 
 // Init initializes Goth with the provided configuration
 func Init(cfg Config) {
+	if cfg.SessionSecret == "" {
+		log.Fatal("SocialLogin ERROR: SessionSecret (SESSION_SECRET) is missing. Goth requires a valid session secret for secure cookies.")
+	}
+
 	// Initialize Session Store
 	store := sessions.NewCookieStore([]byte(cfg.SessionSecret))
 	store.Options.HttpOnly = true
-	store.Options.Secure = false // Set to true in production
+	store.Options.Secure = cfg.IsProduction
+	store.Options.SameSite = http.SameSiteLaxMode
+	store.Options.Path = "/"
 	gothic.Store = store
 
 	var providers []goth.Provider
